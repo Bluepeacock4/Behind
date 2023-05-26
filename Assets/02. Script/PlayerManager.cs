@@ -7,16 +7,20 @@ public class PlayerManager : MonoBehaviour
 
     private Player player;
     private Rigidbody2D rb;
+    private SpriteRenderer sr;
+    private float lastBlinkTime;
 
     private void Start()
     {
         player = GetComponent<Player>();
         rb = GetComponent<Rigidbody2D>();
+        sr = GetComponent<SpriteRenderer>();
     }
 
     void Update()
     {
         HandleMovement();
+        HandleBlink();
     }
 
     private void HandleMovement()
@@ -47,41 +51,30 @@ public class PlayerManager : MonoBehaviour
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        if (collision.gameObject.tag == "Enemy")
+        if (collision.gameObject.tag == "Enemy" && !player.isInvincible)
         {
-            if (collision.gameObject.tag == "Attacking")
+            var spriteRenderer = GetComponent<SpriteRenderer>();
+
+            bool isPlayerFacingRight = !spriteRenderer.flipX;
+
+            Vector2 toEnemy = collision.transform.position - transform.position;
+
+            if (((isPlayerFacingRight && toEnemy.x < 0) || (!isPlayerFacingRight && toEnemy.x > 0)) && player.life <= 0)
             {
-                var spriteRenderer = GetComponent<SpriteRenderer>();
+                Die();
+            }
+            else
+            {
+                player.life--;
+                float direction = transform.localScale.x > 0 ? -1 : 1;
 
-                bool isPlayerFacingRight = !spriteRenderer.flipX;
+                rb.AddForce(new Vector2(direction * player.staggerValue, 0), ForceMode2D.Impulse);
 
-                Vector2 toEnemy = collision.transform.position - transform.position;
-
-                if ((isPlayerFacingRight && toEnemy.x < 0) || (!isPlayerFacingRight && toEnemy.x > 0))
-                {
-                    Die();
-                }
-                else
-                {
-                    player.life--;
-
-                    float direction = transform.localScale.x > 0 ? -1 : 1;
-
-                    rb.AddForce(new Vector2(direction * player.staggerValue, 0), ForceMode2D.Impulse);
-                }
+                player.isInvincible = true;
+                StartCoroutine(InvincibilityEffect(player.invincibleTime));
             }
         }
     }
-
-    //public void TakeDamage(int damage)
-    //{
-    //    player.health -= damage;
-
-    //    if (player.health <= 0)
-    //    {
-    //        Die();
-    //    }
-    //}
 
     private void Die()
     {
@@ -90,6 +83,30 @@ public class PlayerManager : MonoBehaviour
 #else
         Application.Quit();
 #endif
+    }
+
+    private IEnumerator InvincibilityEffect(float invincibleTime)
+    {
+        float timer = 0;
+        while (timer < invincibleTime)
+        {
+            sr.enabled = !sr.enabled;
+            yield return new WaitForSeconds(0.1f);
+            timer += 0.1f;
+        }
+
+        sr.enabled = true;
+
+        player.isInvincible = false;
+    }
+    private void HandleBlink()
+    {
+        if (Input.GetKeyDown(KeyCode.E) && Time.time - lastBlinkTime > player.blinkCoolTime)
+        {
+            float blinkDirection = sr.flipX ? -1 : 1;
+            transform.position += new Vector3(blinkDirection * player.blinkDistance, 0, 0);
+            lastBlinkTime = Time.time;
+        }
     }
 
     private void Attack()

@@ -8,5 +8,9 @@ public class Player : MonoBehaviour
     public float speed;
     public float jumpPower;
     public float staggerValue;
+    public float invincibleTime;
+    public bool isInvincible = false;
+    public float blinkDistance;
+    public float blinkCoolTime;
 }
 
