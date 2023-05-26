@@ -4,14 +4,17 @@ using UnityEngine;
 
 public class AIBase : MonoBehaviour
 {
-    [SerializeField] float walkSpeed, chaseSpeed;
+    [SerializeField] float walkSpeed, chaseSpeed, attackRange;
     int AIMode, stare;
     bool AIActive;
-    [SerializeField] float awareTime;
+    public float awareTime;
+
+    Player player;
     // Start is called before the first frame update
     void Start()
     {
-
+        AIActive = false;
+        AIMode = 0;
     }
 
     // Update is called once per frame
@@ -26,17 +29,24 @@ public class AIBase : MonoBehaviour
                     //레이캐스트에 닿으면 대기걸고 3으로 변환
                     RaycastHit2D EndCheck = Physics2D.Raycast(transform.position, new Vector2(0, -1), 2.0f/*, 레이어 */);
                     if (EndCheck.collider != null)
+                    {
                         AIMode = 3;
+                    }
                     //아니면 이동
                     else
                         transform.Translate(new Vector2(stare * walkSpeed * Time.deltaTime, 0));
                     break;
                 case 1:
                     //플레이어 위치가 적이 향하는 방향이랑 일치하는지 확인
+                    //이동
+                    if ((player.gameObject.transform.position.x - transform.position.x) * stare > 0)
+                        transform.Translate(new Vector2(stare * chaseSpeed * Time.deltaTime, 0));
+                    //범위 내면 공격
+                    else if (Mathf.Abs(player.gameObject.transform.position.x - transform.position.x) <= attackRange)
+                        AIMode = 2;
                     //아니면 3으로
-
-                    //그냥 이동
-                    transform.Translate(new Vector2(stare * chaseSpeed * Time.deltaTime, 0));
+                    else
+                        AIMode = 3;
                     break;
                 case 2:
                     //애니메이션 틀기
@@ -55,12 +65,13 @@ public class AIBase : MonoBehaviour
 
         if (awareTime > 0)
         {
+            OnAware();
             awareTime -= Time.deltaTime;
         }
-
-        //정면에 박스 레이캐스트 발사
-
-        //
+        else if (AIMode == 1)
+        {
+            AIMode = 0;
+        }
     }
 
     IEnumerator AIResetWait(float sec)
@@ -75,32 +86,35 @@ public class AIBase : MonoBehaviour
     {
         //플레이어 공격인지 확인
         //if ()
-            //OnHit();
+        //OnHit();
     }
 
     public void OnHit()
     {
         //플레이어 위치 확인
-
         //앞에서 맞음
-        //스턴 애니메이션
+        if ((player.gameObject.transform.position.x - transform.position.x) * stare > 0)
+        {
+            //스턴 애니메이션
 
-        //대기
-        //AIResetWait();
+            //대기
+            //AIResetWait();
+        }
         //뒤에서 맞음
-        //사망 애니메이션
-
-
+        else
+        {
+            //사망 애니메이션
+        }
     }
 
     public void OnAware()
     {
-
+        AIMode = 1;
     }
 
     public void OnAwareBackSide()
     {
-
+        AIMode = 1;
     }
 }
 /*
