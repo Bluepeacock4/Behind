@@ -8,6 +8,7 @@ public class PlayerManager : MonoBehaviour
     private Player player;
     private Rigidbody2D rb;
     private SpriteRenderer sr;
+    private SpriteRenderer[] heartList;
     private float lastBlinkTime;
 
     private void Start()
@@ -15,6 +16,7 @@ public class PlayerManager : MonoBehaviour
         player = GetComponent<Player>();
         rb = GetComponent<Rigidbody2D>();
         sr = GetComponent<SpriteRenderer>();
+        heartList = GameObject.Find("Heart").GetComponentsInChildren<SpriteRenderer>();
     }
 
     void Update()
@@ -69,6 +71,7 @@ public class PlayerManager : MonoBehaviour
             else if (((isPlayerFacingRight && toEnemy.x < 0) || (!isPlayerFacingRight && toEnemy.x > 0)) && player.life > 1)
             {
                 player.life--;
+                Destroy(heartList[player.life]);
                 player.isInvincible = true;
                 StartCoroutine(InvincibilityEffect(player.invincibleTime));
             }
@@ -105,7 +108,7 @@ public class PlayerManager : MonoBehaviour
     private IEnumerator InvincibilityEffect(float invincibleTime)
     {
         float timer = 0;
-        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), true);  // 公利 面倒 公矫
+        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), true);  // ???? ???? ????
 
         while (timer < invincibleTime)
         {
@@ -116,7 +119,7 @@ public class PlayerManager : MonoBehaviour
 
         sr.enabled = true;
 
-        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), false);  // 面倒 公矫 辆丰
+        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), false);  // ???? ???? ????
         player.isInvincible = false;
     }
     private void Blink()
