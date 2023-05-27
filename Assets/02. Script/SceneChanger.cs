@@ -5,18 +5,18 @@ using UnityEngine.SceneManagement;
 
 public class SceneChanger : MonoBehaviour
 {
-  // Start is called before the first frame update
+
   void Start()
   {
-
+        AudioManager.Instance.Title();
   }
 
-  // Update is called once per frame
   void Update()
-  {
-    if (Input.GetButtonDown("Submit"))
     {
-      SceneManager.LoadScene("GameScene");
+        if (Input.GetButtonDown("Submit"))
+        {
+            AudioManager.Instance.Game();
+            SceneManager.LoadScene("GameScene");
+        }
     }
-  }
 }

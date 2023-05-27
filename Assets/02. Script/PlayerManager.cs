@@ -20,7 +20,7 @@ public class PlayerManager : MonoBehaviour
     void Update()
     {
         HandleMovement();
-        HandleBlink();
+        Blink();
     }
 
     private void HandleMovement()
@@ -28,6 +28,9 @@ public class PlayerManager : MonoBehaviour
         float moveX = 0;
 
         var spriteRenderer = GetComponent<SpriteRenderer>();
+
+        if (!player.canControl)
+            return;
 
         if (Input.GetKey(KeyCode.A))
         {
@@ -59,21 +62,35 @@ public class PlayerManager : MonoBehaviour
 
             Vector2 toEnemy = collision.transform.position - transform.position;
 
-            if (((isPlayerFacingRight && toEnemy.x < 0) || (!isPlayerFacingRight && toEnemy.x > 0)) && player.life <= 0)
+            if (((isPlayerFacingRight && toEnemy.x < 0) || (!isPlayerFacingRight && toEnemy.x > 0)) && player.life <= 1)
             {
                 Die();
             }
-            else
+            else if (((isPlayerFacingRight && toEnemy.x < 0) || (!isPlayerFacingRight && toEnemy.x > 0)) && player.life > 1)
             {
                 player.life--;
-                float direction = transform.localScale.x > 0 ? -1 : 1;
-
-                rb.AddForce(new Vector2(direction * player.staggerValue, 0), ForceMode2D.Impulse);
-
                 player.isInvincible = true;
                 StartCoroutine(InvincibilityEffect(player.invincibleTime));
             }
+            else if ((!isPlayerFacingRight && toEnemy.x < 0) || (isPlayerFacingRight && toEnemy.x > 0))
+            {
+                Vector2 knockbackDir = transform.position - collision.transform.position;
+                knockbackDir = knockbackDir.normalized;
+
+                knockbackDir.y = 0.3f;
+
+                rb.AddForce(knockbackDir * player.knockbackForce, ForceMode2D.Impulse);
+                StartCoroutine(Knockback());
+                StartCoroutine(KnockbackEffect());
+            }
         }
+    }
+
+    private IEnumerator Knockback()
+    {
+        player.canControl = false;
+        yield return new WaitForSeconds(player.staggerTime); 
+        player.canControl = true;
     }
 
     private void Die()
@@ -88,6 +105,8 @@ public class PlayerManager : MonoBehaviour
     private IEnumerator InvincibilityEffect(float invincibleTime)
     {
         float timer = 0;
+        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), true);  // 公利 面倒 公矫
+
         while (timer < invincibleTime)
         {
             sr.enabled = !sr.enabled;
@@ -97,16 +116,43 @@ public class PlayerManager : MonoBehaviour
 
         sr.enabled = true;
 
+        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), false);  // 面倒 公矫 辆丰
         player.isInvincible = false;
     }
-    private void HandleBlink()
+    private void Blink()
     {
+
+        if (!player.canControl)
+            return;
+
         if (Input.GetKeyDown(KeyCode.E) && Time.time - lastBlinkTime > player.blinkCoolTime)
         {
             float blinkDirection = sr.flipX ? -1 : 1;
             transform.position += new Vector3(blinkDirection * player.blinkDistance, 0, 0);
             lastBlinkTime = Time.time;
         }
+    }
+
+    IEnumerator KnockbackEffect()
+    {
+        var spriteRenderer = GetComponent<SpriteRenderer>();
+
+        var originalColor = spriteRenderer.color;
+
+        // Set the sprite's color to red
+        spriteRenderer.color = Color.red;
+
+        float knockbackTime = player.staggerTime;
+        float elapsed = 0f;
+
+        while (elapsed < knockbackTime)
+        {
+            spriteRenderer.color = Color.Lerp(Color.red, originalColor, elapsed / knockbackTime);
+            elapsed += Time.deltaTime;
+            yield return null;
+        }
+
+        spriteRenderer.color = originalColor;
     }
 
     private void Attack()

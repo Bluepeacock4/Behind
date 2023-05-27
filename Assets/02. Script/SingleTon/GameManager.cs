@@ -49,9 +49,4 @@ public class GameManager : MonoBehaviour
         AudioManager.Instance.Click();
         SceneManager.LoadScene("TitleScene");
     }
-
-    public void OpenOption()
-    {
-        AudioManager.Instance.OpenPannel();
-    }
 }
