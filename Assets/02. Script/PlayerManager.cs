@@ -9,18 +9,46 @@ public class PlayerManager : MonoBehaviour
     private Rigidbody2D rb;
     private SpriteRenderer sr;
     private float lastBlinkTime;
+    public GameObject attackRange;
 
     private void Start()
     {
         player = GetComponent<Player>();
         rb = GetComponent<Rigidbody2D>();
         sr = GetComponent<SpriteRenderer>();
+        SetAttackRangePosition();
     }
 
     void Update()
     {
         HandleMovement();
         Blink();
+
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            PerformAttack();
+        }
+    }
+
+    private void PerformAttack()
+    {
+        attackRange.SetActive(true);
+    }
+
+    private void SetAttackRangePosition()
+    {
+        Vector3 attackRangePosition = transform.position;
+
+        if (sr.flipX)
+        {
+            attackRangePosition += new Vector3(-1.0f, 0.0f, 0.0f);
+        }
+        else
+        {
+            attackRangePosition += new Vector3(1.0f, 0.0f, 0.0f);
+        }
+
+        attackRange.transform.position = attackRangePosition;
     }
 
     private void HandleMovement()
@@ -83,8 +111,19 @@ public class PlayerManager : MonoBehaviour
                 StartCoroutine(Knockback());
                 StartCoroutine(KnockbackEffect());
             }
+
+            if (attackRange.activeSelf)
+            {
+                Vector2 toEnemyr = collision.transform.position - transform.position;
+                if (Vector2.Dot(toEnemyr, Vector2.right) < 0)
+                {
+                    collision.gameObject.SendMessage("Die", SendMessageOptions.DontRequireReceiver);
+                }
+            }
+
         }
     }
+
 
     private IEnumerator Knockback()
     {
