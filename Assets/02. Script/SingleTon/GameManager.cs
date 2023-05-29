@@ -43,10 +43,17 @@ public class GameManager : MonoBehaviour
         isPause = false;
     }
 
+    public void RetryGame()
+    {
+        ContinueGame();
+        //AudioManager.Instance.Click();
+        SceneManager.LoadScene("GameScene");
+    }
+
     public void EnterTitle()
     {
         ContinueGame();
-        AudioManager.Instance.Click();
+        //AudioManager.Instance.Click();
         SceneManager.LoadScene("TitleScene");
     }
 }

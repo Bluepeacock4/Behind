@@ -4,8 +4,11 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
-    [Tooltip("플레이어의 목숨 수")]
-    public int life = 3;
+    [Tooltip("플레이어의 최대 목숨 수")]
+    public int maxLife = 3;
+
+    [Tooltip("플레이어의 현재 목숨 수")]
+    public int currentLife;
 
     [Tooltip("플레이어의 이동 속도")]
     public float speed;

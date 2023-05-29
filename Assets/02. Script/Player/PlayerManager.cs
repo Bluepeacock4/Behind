@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerManager : MonoBehaviour
 {
@@ -8,7 +9,11 @@ public class PlayerManager : MonoBehaviour
     private Rigidbody2D rb;
     private Animator anim;
     private float lastBlinkTime;
+    private bool isCooldown = false;
     public AttackEffect attackEffect;
+    public Image skillCooldownImage;
+    public Image[] lifeImages;
+    public GameObject gameOverUI;
     private LayerMask groundLayer;
 
     private void Start()
@@ -111,12 +116,14 @@ public class PlayerManager : MonoBehaviour
         bool isPlayerFacingRight = transform.rotation.eulerAngles.y == 0;
         Vector2 toEnemy = collision.transform.position - transform.position;
 
-        if (((isPlayerFacingRight && toEnemy.x < 0) || (!isPlayerFacingRight && toEnemy.x > 0)) && player.life <= 1)
+        if (((isPlayerFacingRight && toEnemy.x < 0) || (!isPlayerFacingRight && toEnemy.x > 0)) && player.currentLife <= 1)
         {
-            Die();
+            GameOver();
         }
-        else if (((isPlayerFacingRight && toEnemy.x < 0) || (!isPlayerFacingRight && toEnemy.x > 0)) && player.life > 1)
+        else if (((isPlayerFacingRight && toEnemy.x < 0) || (!isPlayerFacingRight && toEnemy.x > 0)) && player.currentLife > 1)
         {
+            player.currentLife--;
+            UpdateLifeUI();
             PlayerInvincibility(collision.collider);
         }
         else if ((!isPlayerFacingRight && toEnemy.x < 0) || (isPlayerFacingRight && toEnemy.x > 0))
@@ -125,10 +132,25 @@ public class PlayerManager : MonoBehaviour
         }
     }
 
+    private void UpdateLifeUI()
+    {
+        for (int i = 0; i < lifeImages.Length; i++)
+        {
+            if (i < player.currentLife)
+            {
+                lifeImages[i].enabled = true;  // 해당 라이프 이미지 활성화
+            }
+            else
+            {
+                lifeImages[i].enabled = false;  // 해당 라이프 이미지 비활성화
+            }
+        }
+    }
+
     //  플레이어 무적
     private void PlayerInvincibility(Collider2D otherCollider)
     {
-        player.life--;
+        player.maxLife--;
 
         player.isAttacking = false;
         player.isInvincible = true;
@@ -183,18 +205,15 @@ public class PlayerManager : MonoBehaviour
         player.isAttacking = false;
     }
 
-    private void Die()
+    private void GameOver()
     {
-#if UNITY_EDITOR
-        UnityEditor.EditorApplication.isPlaying = false;
-#else
-        Application.Quit();
-#endif
+        gameOverUI.SetActive(true);
+        GameManager.Instance.PauseGame();
     }
 
     private void Blink()
     {
-        if (!player.canControl)
+        if (!player.canControl || isCooldown)
             return;
 
         if (Input.GetKeyDown(KeyCode.E) && Time.time - lastBlinkTime > player.blinkCoolTime)
@@ -203,6 +222,28 @@ public class PlayerManager : MonoBehaviour
             Vector2 blinkOffset = transform.right * blinkDirection * player.blinkDistance;
             rb.MovePosition(rb.position + blinkOffset);
             lastBlinkTime = Time.time;
+
+            // 스킬 쿨타임 코루틴 시작
+            StartCoroutine(SkillCooldown());
         }
+    }
+
+    private IEnumerator SkillCooldown()
+    {
+        isCooldown = true;
+
+        float time = 0f;
+        skillCooldownImage.fillAmount = 1f;
+
+        while (time < player.blinkCoolTime)
+        {
+            time += Time.deltaTime;
+            skillCooldownImage.fillAmount = 1 - (time / player.blinkCoolTime);
+            yield return null;
+        }
+
+        skillCooldownImage.fillAmount = 0f;
+
+        isCooldown = false;
     }
 }
