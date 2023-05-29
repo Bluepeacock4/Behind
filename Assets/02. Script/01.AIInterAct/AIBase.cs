@@ -5,70 +5,108 @@ using UnityEngine;
 public class AIBase : MonoBehaviour
 {
     [SerializeField] float walkSpeed, chaseSpeed, attackRange;
-    int AIMode, stare;
+    [SerializeField] int AIMode, stare;
     bool AIActive;
+    public bool awareSpot;
     public float awareTime;
+    float idleTurCount;
+    public Player player;
+    [SerializeField] GameObject deathScream;
+    public Portal portal;
+    [SerializeField] Animator animator;
 
-    Player player;
+    [Space]
+    [SerializeField] bool TestShot;
+
+
     // Start is called before the first frame update
     void Start()
     {
-        AIActive = false;
+        stare = 1;
+        //AIActive = false;
+        player = FindObjectOfType<Player>();
         AIMode = 0;
     }
 
     // Update is called once per frame
     void Update()
     {
+        if (TestShot)
+        {
+            TestShot = false;
+            OnHit(); 
+        }
+        //print(AIActive);
         if (AIActive)
         {
             switch (AIMode)
             {
+                case -1:
+                    animator.SetBool("run", true);
+                    if (idleTurCount < 3.0f)
+                    {
+                        transform.Translate(new Vector2(walkSpeed * Time.deltaTime, 0));
+                        idleTurCount += walkSpeed * Time.deltaTime;
+                    }
+                    else
+                    {
+                        idleTurCount = 0;
+                        AIMode = 0;
+                    }
+                    break;
                 case 0:
+                    animator.SetBool("run", true);
                     //발 밑으로 레이캐스트 쏴서 확인
                     //레이캐스트에 닿으면 대기걸고 3으로 변환
-                    RaycastHit2D EndCheck = Physics2D.Raycast(transform.position, new Vector2(0, -1), 2.0f/*, 레이어 */);
+                    RaycastHit2D EndCheck = Physics2D.Raycast(transform.position, new Vector2(0, -1), 2.0f, 1 << LayerMask.NameToLayer("PlatformEdge"));
                     if (EndCheck.collider != null)
                     {
-                        AIMode = 3;
+                        //print("TurnMode: Update");
+                        StartCoroutine(AIIdleTurnWait(1.2f));
                     }
                     //아니면 이동
                     else
-                        transform.Translate(new Vector2(stare * walkSpeed * Time.deltaTime, 0));
+                    {
+                        //print("idle moving");
+                        transform.Translate(new Vector2(walkSpeed * Time.deltaTime, 0));
+                    }
                     break;
                 case 1:
-                    //플레이어 위치가 적이 향하는 방향이랑 일치하는지 확인
-                    //이동
-                    if ((player.gameObject.transform.position.x - transform.position.x) * stare > 0)
-                        transform.Translate(new Vector2(stare * chaseSpeed * Time.deltaTime, 0));
+                    //플레이어가 플랫폼 내부에 있는지 확인
+                    if (!portal.stepOn)
+                    {
+                        AIResetWait(2.0f);
+                    }
                     //범위 내면 공격
                     else if (Mathf.Abs(player.gameObject.transform.position.x - transform.position.x) <= attackRange)
                         AIMode = 2;
+                    //플레이어 위치가 적이 향하는 방향이랑 일치하는지 확인
+                    //이동
+                    else if ((player.gameObject.transform.position.x - transform.position.x) * stare > 0)
+                        transform.Translate(new Vector2(chaseSpeed * Time.deltaTime, 0));
                     //아니면 3으로
                     else
-                        AIMode = 3;
+                    {
+                        stare *= -1;
+                        transform.Rotate(new Vector3(0, 180, 0));
+                    }
                     break;
                 case 2:
                     //애니메이션 틀기
-
+                    animator.SetTrigger("attack");
                     //대기걸기
-                    //StartCoroutine(AIResetWait());
-                    break;
-                case 3:
-                    stare *= -1;
-                    //stare값이랑 스프라이트 방향 일치하는지 확인
-
+                    StartCoroutine(AIAttackWait(.8f));
                     break;
             }
 
         }
 
-        if (awareTime > 0)
+
+        if (awareTime > 0 && !awareSpot)
         {
-            OnAware();
             awareTime -= Time.deltaTime;
         }
-        else if (AIMode == 1)
+        else if (AIMode == 1 && !awareSpot)
         {
             AIMode = 0;
         }
@@ -77,17 +115,33 @@ public class AIBase : MonoBehaviour
     IEnumerator AIResetWait(float sec)
     {
         AIActive = false;
+        awareSpot = false;
+        awareTime = 0;
         yield return new WaitForSeconds(sec);
         AIMode = 0;
         AIActive = true;
     }
-
-    private void OnTriggerEnter2D(Collider2D collision)
+    IEnumerator AIAttackWait(float sec)
     {
-        //플레이어 공격인지 확인
-        //if ()
-        //OnHit();
+        AIActive = false;
+        awareSpot = true;
+        awareTime = 5.5f;
+        yield return new WaitForSeconds(sec);
+        AIMode = 1;
+        AIActive = true;
     }
+    IEnumerator AIIdleTurnWait(float sec)
+    {
+        animator.SetBool("run",false);
+        AIActive = false;
+        //print("turnModeOn");
+        yield return new WaitForSeconds(sec);
+        stare *= -1;
+        transform.Rotate(new Vector3(0, 180, 0));
+        AIMode = -1;
+        AIActive = true;
+    }
+
 
     public void OnHit()
     {
@@ -96,25 +150,47 @@ public class AIBase : MonoBehaviour
         if ((player.gameObject.transform.position.x - transform.position.x) * stare > 0)
         {
             //스턴 애니메이션
+            print("strun");
+            animator.SetTrigger("hit");
 
             //대기
-            //AIResetWait();
+            AIResetWait(1.2f);
         }
         //뒤에서 맞음
         else
         {
+            print("die");
             //사망 애니메이션
+            animator.SetTrigger("hit");
+            //다른 적이 눈치채게하기
+            deathScream.SetActive(true);
+            //삭제
+            portal.count--;
+            Destroy(this.gameObject, .6f);
         }
     }
 
     public void OnAware()
     {
-        AIMode = 1;
+        if (!awareSpot && portal.stepOn)
+        {
+            awareSpot = true;
+            AIMode = 1;
+            awareTime = 5.0f;
+        }
+
+        print("spotted");
+    }
+    public void AwareOut()
+    {
+        awareSpot = false;
+        print("unspotted");
     }
 
-    public void OnAwareBackSide()
+    public void SetAct()
     {
-        AIMode = 1;
+        AIActive = true;
+        //print(AIActive);
     }
 }
 /*
