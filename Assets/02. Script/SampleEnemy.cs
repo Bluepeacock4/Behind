@@ -25,4 +25,9 @@ public class SampleEnemy : MonoBehaviour
             direction *= -1;
         }
     }
+
+    public void Die()
+    {
+        Debug.Log("Die »£√‚");
+    }
 }
