@@ -7,56 +7,25 @@ public class PlayerManager : MonoBehaviour
 
     private Player player;
     private Rigidbody2D rb;
-    private SpriteRenderer sr;
-    private SpriteRenderer[] heartList;
+    private Animator anim;
     private float lastBlinkTime;
-    public GameObject attackRange;
 
     private void Start()
     {
         player = GetComponent<Player>();
         rb = GetComponent<Rigidbody2D>();
-        sr = GetComponent<SpriteRenderer>();
-        heartList = GameObject.Find("Heart").GetComponentsInChildren<SpriteRenderer>();
+        anim = GetComponent<Animator>();
     }
 
     void Update()
     {
         HandleMovement();
         Blink();
-
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            PerformAttack();
-        }
-    }
-
-    private void PerformAttack()
-    {
-        attackRange.SetActive(true);
-    }
-
-    private void SetAttackRangePosition()
-    {
-        Vector3 attackRangePosition = transform.position;
-
-        if (sr.flipX)
-        {
-            attackRangePosition += new Vector3(-1.0f, 0.0f, 0.0f);
-        }
-        else
-        {
-            attackRangePosition += new Vector3(1.0f, 0.0f, 0.0f);
-        }
-
-        attackRange.transform.position = attackRangePosition;
     }
 
     private void HandleMovement()
     {
         float moveX = 0;
-
-        var spriteRenderer = GetComponent<SpriteRenderer>();
 
         if (!player.canControl)
             return;
@@ -64,30 +33,50 @@ public class PlayerManager : MonoBehaviour
         if (Input.GetKey(KeyCode.A))
         {
             moveX = -1;
-            spriteRenderer.flipX = true;
         }
         else if (Input.GetKey(KeyCode.D))
         {
             moveX = 1;
-            spriteRenderer.flipX = false;
         }
 
         rb.velocity = new Vector2(moveX * player.speed, rb.velocity.y);
 
+        if (moveX < 0)
+        {
+            transform.rotation = Quaternion.Euler(0, 180, 0);
+        }
+        else if (moveX > 0)
+        {
+            transform.rotation = Quaternion.Euler(0, 0, 0);
+        }
+
+        if (moveX != 0)
+        {
+            anim.SetBool("isRunning", true);
+        }
+        else
+        {
+            anim.SetBool("isRunning", false);
+        }
+
         if (Input.GetKeyDown(KeyCode.Space) && Mathf.Abs(rb.velocity.y) < 0.001f)
         {
             rb.AddForce(new Vector2(0, player.jumpPower), ForceMode2D.Impulse);
+            anim.SetBool("isJumping", true);
+        }
+        else
+        {
+            anim.SetBool("isJumping", false);
         }
     }
+
 
 
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.tag == "Enemy" && !player.isInvincible)
         {
-            var spriteRenderer = GetComponent<SpriteRenderer>();
-
-            bool isPlayerFacingRight = !spriteRenderer.flipX;
+            bool isPlayerFacingRight = transform.rotation.eulerAngles.y == 0;
 
             Vector2 toEnemy = collision.transform.position - transform.position;
 
@@ -97,10 +86,11 @@ public class PlayerManager : MonoBehaviour
             }
             else if (((isPlayerFacingRight && toEnemy.x < 0) || (!isPlayerFacingRight && toEnemy.x > 0)) && player.life > 1)
             {
-                player.life--;
-                Destroy(heartList[player.life]);
                 player.isInvincible = true;
-                StartCoroutine(InvincibilityEffect(player.invincibleTime));
+                Collider2D otherCollider = collision.collider;
+
+                Physics2D.IgnoreCollision(GetComponent<Collider2D>(), otherCollider);
+                StartCoroutine(ResetCollision(otherCollider));
             }
             else if ((!isPlayerFacingRight && toEnemy.x < 0) || (isPlayerFacingRight && toEnemy.x > 0))
             {
@@ -111,26 +101,17 @@ public class PlayerManager : MonoBehaviour
 
                 rb.AddForce(knockbackDir * player.knockbackForce, ForceMode2D.Impulse);
                 StartCoroutine(Knockback());
-                StartCoroutine(KnockbackEffect());
             }
-
-            if (attackRange.activeSelf)
-            {
-                Vector2 toEnemyr = collision.transform.position - transform.position;
-                if (Vector2.Dot(toEnemyr, Vector2.right) < 0)
-                {
-                    collision.gameObject.SendMessage("Die", SendMessageOptions.DontRequireReceiver);
-                }
-            }
-
         }
     }
 
 
     private IEnumerator Knockback()
     {
+        anim.SetBool("isHit", true);
         player.canControl = false;
-        yield return new WaitForSeconds(player.staggerTime); 
+        yield return new WaitForSeconds(player.staggerTime);
+        anim.SetBool("isHit", false);
         player.canControl = true;
     }
 
@@ -143,62 +124,28 @@ public class PlayerManager : MonoBehaviour
 #endif
     }
 
-    private IEnumerator InvincibilityEffect(float invincibleTime)
+    private IEnumerator ResetCollision(Collider2D otherCollider)
     {
-        float timer = 0;
-        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), true);  // ???? ???? ????
+        anim.SetBool("isHit", true);
+        yield return new WaitForSeconds(player.invincibleTime);
 
-        while (timer < invincibleTime)
-        {
-            sr.enabled = !sr.enabled;
-            yield return new WaitForSeconds(0.1f);
-            timer += 0.1f;
-        }
-
-        sr.enabled = true;
-
-        Physics2D.IgnoreLayerCollision(LayerMask.NameToLayer("Player"), LayerMask.NameToLayer("Enemy"), false);  // ???? ???? ????
+        anim.SetBool("isHit", true);
+        Physics2D.IgnoreCollision(GetComponent<Collider2D>(), otherCollider, false);
         player.isInvincible = false;
     }
+
     private void Blink()
     {
-
         if (!player.canControl)
             return;
 
         if (Input.GetKeyDown(KeyCode.E) && Time.time - lastBlinkTime > player.blinkCoolTime)
         {
-            float blinkDirection = sr.flipX ? -1 : 1;
-            transform.position += new Vector3(blinkDirection * player.blinkDistance, 0, 0);
+            float blinkDirection = transform.rotation.eulerAngles.y == 0 || transform.rotation.eulerAngles.y == 180 ? 1 : -1;
+            Vector2 blinkOffset = transform.right * blinkDirection * player.blinkDistance;
+            rb.MovePosition(rb.position + blinkOffset);
             lastBlinkTime = Time.time;
         }
-    }
-
-    IEnumerator KnockbackEffect()
-    {
-        var spriteRenderer = GetComponent<SpriteRenderer>();
-
-        var originalColor = spriteRenderer.color;
-
-        // Set the sprite's color to red
-        spriteRenderer.color = Color.red;
-
-        float knockbackTime = player.staggerTime;
-        float elapsed = 0f;
-
-        while (elapsed < knockbackTime)
-        {
-            spriteRenderer.color = Color.Lerp(Color.red, originalColor, elapsed / knockbackTime);
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        spriteRenderer.color = originalColor;
-    }
-
-    private void Attack()
-    {
-
     }
 
 }
