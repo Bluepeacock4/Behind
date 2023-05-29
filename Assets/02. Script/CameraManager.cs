@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class CameraManager : MonoBehaviour
 {
+    public Transform target;
     public float minCameraX = -10.0f;
     public float maxCameraX = 10.0f;
     public float minCameraY = -10.0f;
@@ -11,10 +12,13 @@ public class CameraManager : MonoBehaviour
 
     void LateUpdate()
     {
-        Vector3 cameraPosition = transform.position;
-        cameraPosition.x = Mathf.Clamp(cameraPosition.x, minCameraX, maxCameraX);
-        cameraPosition.y = Mathf.Clamp(cameraPosition.y, minCameraY, maxCameraY);
+        if (target != null)
+        {
+            Vector3 targetPosition = target.position;
+            targetPosition.x = Mathf.Clamp(targetPosition.x, minCameraX, maxCameraX);
+            targetPosition.y = Mathf.Clamp(targetPosition.y, minCameraY, maxCameraY);
 
-        transform.position = cameraPosition;
+            transform.position = new Vector3(targetPosition.x, targetPosition.y, transform.position.z);
+        }
     }
 }
