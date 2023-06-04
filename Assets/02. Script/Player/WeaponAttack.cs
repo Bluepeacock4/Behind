@@ -15,8 +15,7 @@ public class WeaponAttack : MonoBehaviour
     {
         if (collision.gameObject.tag == "Enemy" && player.isAttacking)
         {
-            Debug.Log("º¸³½´ç");
-            collision.gameObject.SendMessage("Die", SendMessageOptions.DontRequireReceiver);
+            collision.gameObject.SendMessage("OnHit", SendMessageOptions.DontRequireReceiver);
         }
     }
 }

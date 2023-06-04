@@ -11,8 +11,12 @@ public class AIBase : MonoBehaviour
     public float awareTime;
     float idleTurCount;
     public Player player;
+    public GameObject enemyAttackRange;
+    bool isAttacking;
+    ScoreManager scoreManager;
     [SerializeField] GameObject deathScream;
     public Portal portal;
+    private bool isDead = false;
     [SerializeField] Animator animator;
 
     [Space]
@@ -25,6 +29,7 @@ public class AIBase : MonoBehaviour
         stare = 1;
         //AIActive = false;
         player = FindObjectOfType<Player>();
+        scoreManager = FindObjectOfType<ScoreManager>();
         AIMode = 0;
     }
 
@@ -94,8 +99,9 @@ public class AIBase : MonoBehaviour
                 case 2:
                     //애니메이션 틀기
                     animator.SetTrigger("attack");
+                    enemyAttackRange.SetActive(true);
                     //대기걸기
-                    StartCoroutine(AIAttackWait(.8f));
+                    StartCoroutine(AIAttackWait(0.8f));
                     break;
             }
 
@@ -129,6 +135,7 @@ public class AIBase : MonoBehaviour
         yield return new WaitForSeconds(sec);
         AIMode = 1;
         AIActive = true;
+        enemyAttackRange.SetActive(false);
     }
     IEnumerator AIIdleTurnWait(float sec)
     {
@@ -145,28 +152,34 @@ public class AIBase : MonoBehaviour
 
     public void OnHit()
     {
-        //플레이어 위치 확인
-        //앞에서 맞음
-        if ((player.gameObject.transform.position.x - transform.position.x) * stare > 0)
+        if (!isDead)
         {
-            //스턴 애니메이션
-            print("strun");
-            animator.SetTrigger("hit");
+            //플레이어 위치 확인
+            //앞에서 맞음
+            if ((player.gameObject.transform.position.x - transform.position.x) * stare > 0)
+            {
+                //스턴 애니메이션
+                print("strun");
+                animator.SetTrigger("hit");
 
-            //대기
-            AIResetWait(1.2f);
-        }
-        //뒤에서 맞음
-        else
-        {
-            print("die");
-            //사망 애니메이션
-            animator.SetTrigger("hit");
-            //다른 적이 눈치채게하기
-            deathScream.SetActive(true);
-            //삭제
-            portal.count--;
-            Destroy(this.gameObject, .6f);
+                //대기
+                AIResetWait(2f);
+            }
+            //뒤에서 맞음
+            else
+            {
+                scoreManager.scoreUp();
+                scoreManager.ComboUp();
+                print("die");
+                //사망 애니메이션
+                animator.SetTrigger("hit");
+                //다른 적이 눈치채게하기
+                deathScream.SetActive(true);
+                //삭제
+                portal.count--;
+                isDead = true;
+                Destroy(this.gameObject, 0.6f);
+            }
         }
     }
 

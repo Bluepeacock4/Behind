@@ -9,6 +9,12 @@ public class CameraManager : MonoBehaviour
     public float maxCameraX = 10.0f;
     public float minCameraY = -10.0f;
     public float maxCameraY = 10.0f;
+    private CameraShake cameraShake;
+
+    private void Start()
+    {
+        cameraShake = GetComponent<CameraShake>();
+    }
 
     void LateUpdate()
     {
@@ -17,6 +23,7 @@ public class CameraManager : MonoBehaviour
             Vector3 targetPosition = target.position;
             targetPosition.x = Mathf.Clamp(targetPosition.x, minCameraX, maxCameraX);
             targetPosition.y = Mathf.Clamp(targetPosition.y, minCameraY, maxCameraY);
+            targetPosition += cameraShake.GetShakeOffset();
 
             transform.position = new Vector3(targetPosition.x, targetPosition.y, transform.position.z);
         }

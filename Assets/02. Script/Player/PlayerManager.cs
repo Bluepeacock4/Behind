@@ -118,6 +118,8 @@ public class PlayerManager : MonoBehaviour
 
         if (((isPlayerFacingRight && toEnemy.x < 0) || (!isPlayerFacingRight && toEnemy.x > 0)) && player.currentLife <= 1)
         {
+            player.currentLife--;
+            UpdateLifeUI();
             GameOver();
         }
         else if (((isPlayerFacingRight && toEnemy.x < 0) || (!isPlayerFacingRight && toEnemy.x > 0)) && player.currentLife > 1)
@@ -150,6 +152,8 @@ public class PlayerManager : MonoBehaviour
     //  플레이어 무적
     private void PlayerInvincibility(Collider2D otherCollider)
     {
+        if (otherCollider == null) return;
+        StartCoroutine(RedScreenEffect());
         player.maxLife--;
 
         player.isAttacking = false;
@@ -162,6 +166,7 @@ public class PlayerManager : MonoBehaviour
     //  무적 시 적과의 충돌 무시
     private IEnumerator IgnoreContact(Collider2D otherCollider)
     {
+        if (otherCollider == null) yield break;
         yield return new WaitForSeconds(player.invincibleTime);
 
         Physics2D.IgnoreCollision(GetComponent<Collider2D>(), otherCollider, false);
@@ -184,6 +189,7 @@ public class PlayerManager : MonoBehaviour
     private IEnumerator Stagger()
     {
         anim.SetTrigger("Hit");
+        anim.SetBool("isRunning", false);
         player.canControl = false;
         yield return new WaitForSeconds(player.staggerTime);
         player.canControl = true;
@@ -225,7 +231,24 @@ public class PlayerManager : MonoBehaviour
 
             // 스킬 쿨타임 코루틴 시작
             StartCoroutine(SkillCooldown());
+
+            // 적과의 충돌 비활성화 코루틴 시작
+            StartCoroutine(DisableEnemyCollision());
         }
+    }
+
+    private IEnumerator DisableEnemyCollision()
+    {
+        int enemyLayer = LayerMask.NameToLayer("Enemy");
+        int playerLayer = LayerMask.NameToLayer("Player");
+
+        // Enemy 레이어와 Player 레이어의 충돌을 무시합니다.
+        Physics2D.IgnoreLayerCollision(enemyLayer, playerLayer, true);
+
+        yield return new WaitForSeconds(player.blinkInvincibleTime);
+
+        // Enemy 레이어와 Player 레이어의 충돌 무시를 해제합니다.
+        Physics2D.IgnoreLayerCollision(enemyLayer, playerLayer, false);
     }
 
     private IEnumerator SkillCooldown()
@@ -246,4 +269,38 @@ public class PlayerManager : MonoBehaviour
 
         isCooldown = false;
     }
+
+    public Image redScreen;
+    public float redScreenDuration = 0.2f;
+    public float maxAlpha = 0.45f;
+
+    IEnumerator RedScreenEffect()
+    {
+        float time = 0f;
+
+        while (time < redScreenDuration / 2)
+        {
+            time += Time.deltaTime;
+            Color redScreenColor = redScreen.color;
+            redScreenColor.a = (time / (redScreenDuration / 2)) * maxAlpha;
+            redScreen.color = redScreenColor;
+            yield return null;
+        }
+
+        time = 0f;
+
+        while (time < redScreenDuration / 2)
+        {
+            time += Time.deltaTime;
+            Color redScreenColor = redScreen.color;
+            redScreenColor.a = maxAlpha - ((time / (redScreenDuration / 2)) * maxAlpha);
+            redScreen.color = redScreenColor;
+            yield return null;
+        }
+
+        Color finalColor = redScreen.color;
+        finalColor.a = 0f;
+        redScreen.color = finalColor;
+    }
+
 }

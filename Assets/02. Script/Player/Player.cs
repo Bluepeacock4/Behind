@@ -25,6 +25,9 @@ public class Player : MonoBehaviour
     [Tooltip("플레이어 후면 피격 시 적용되는 무적 시간")]
     public float invincibleTime;
 
+    [Tooltip("플레이어 순간이동 시 적용되는 무적 시간")]
+    public float blinkInvincibleTime;
+
     [Tooltip("플레이어 순간이동 거리")]
     public float blinkDistance;
 
